@@ -10,9 +10,28 @@ import Foundation
 
 @main
 struct GoldenRatioStudyApp: App {
+    @StateObject private var authManager = AuthenticationManager()
+    
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            RootView()
+                .environmentObject(authManager)
+        }
+    }
+}
+
+// MARK: - Root View
+struct RootView: View {
+    @EnvironmentObject var authManager: AuthenticationManager
+    
+    var body: some View {
+        Group {
+            if authManager.isAuthenticated {
+                ContentView()
+                    .environmentObject(authManager)
+            } else {
+                SignInView(authManager: authManager)
+            }
         }
     }
 }
@@ -99,9 +118,13 @@ class StudySession: ObservableObject {
 
 // MARK: - Main Content View
 struct ContentView: View {
+    @EnvironmentObject var authManager: AuthenticationManager
     @State private var studySession: StudySession?
     @State private var selectedMethod: StudyMethod?
     @State private var showingSession = false
+    @State private var showingProfile = false
+    
+    private lazy var profileManager = ProfileManager(authManager: authManager)
     
     let studyMethods = [
         StudyMethod(
@@ -172,6 +195,22 @@ struct ContentView: View {
         )
         .navigationTitle("Golden Ratio Study")
         .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button(action: {
+                    showingProfile = true
+                }) {
+                    ProfilePictureView(
+                        imageURL: authManager.currentUser?.profilePictureURL,
+                        size: 32,
+                        borderWidth: 2
+                    )
+                }
+            }
+        }
+        .sheet(isPresented: $showingProfile) {
+            ProfileView(authManager: authManager, profileManager: profileManager)
+        }
     }
     
     private var headerView: some View {
